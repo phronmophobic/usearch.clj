@@ -1,0 +1,20 @@
+{:paths ["src" "resources"]
+ :deps {org.clojure/clojure {:mvn/version "1.12.0-alpha3"}
+        net.java.dev.jna/jna {:mvn/version "5.13.0"}
+        com.phronemophobic/clong {:mvn/version "1.1"}}
+ :aliases
+ {
+  :build {:deps {io.github.clojure/tools.build {:git/tag "v0.8.3" :git/sha "0d20256"}
+                 slipset/deps-deploy {:mvn/version "RELEASE"}}
+          :ns-default build}
+  
+  :project
+  {:extra-deps {org.bytedeco/llvm-platform {:mvn/version "16.0.4-1.5.9"}
+                ;;com.phronemophobic.cljonda/clip-cpp-darwin-aarch64 {:mvn/version "f4ee24bb86680a27f83c8e8c70adbcf4cb776615"}
+                }
+   :jvm-opts ["-XX:+UnlockDiagnosticVMOptions"
+              "-XX:+DebugNonSafepoints"
+              "-XX:-HeapDumpOnOutOfMemoryError"
+
+              "-Djna.library.path=/Users/adrian/workspace/usearch/build_release/"
+              ]}}}
