@@ -292,7 +292,7 @@
 
   If no `n` is provided, returns the closest match."
   ([index vec]
-   (search index vec 1))
+   (first (search index vec 1)))
   ([index vec n]
    (let [;; longs
          keys* (Memory. (* 8 n))
