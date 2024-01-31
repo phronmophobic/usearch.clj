@@ -99,8 +99,8 @@
    (usearch_init_options_tByReference.)
    (if (:metric m)
      m
-     ;; use :metric/cos as default metric
-     (assoc m :metric :metric/cos))))
+     ;; use :metric/ip as default metric
+     (assoc m :metric :metric/ip))))
 
 (defn ^:private quant-size [kind]
   (case kind
