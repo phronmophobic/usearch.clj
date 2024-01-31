@@ -300,7 +300,7 @@
          distances* (Memory. (* 4 n))]
      (let [found (with-error
                    (raw/usearch_search index vec (vector-kind vec) n keys* distances*))]
-       (into {}
+       (into []
              (map (fn [i]
                     [(.getLong keys* (* 8 i))
                      (.getFloat distances* (* 4 i))]))
