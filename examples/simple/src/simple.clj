@@ -31,6 +31,7 @@
 (count index)
 ;; 100
 
+;; Can check for the presence of keys
 (every? #(contains? index %)
         (keys vecs))
 ;; true
@@ -52,7 +53,8 @@
 ;; [16 -71872.88] 
 
 ;; lookup vector for 16
-(get index 16) ;; #object["[F" 0x4297c486 "[F@4297c486"]
+(get index 16)
+;; #object["[F" 0x4297c486 "[F@4297c486"]
 
 ;; get 10 closest matches
 (usearch/search index
