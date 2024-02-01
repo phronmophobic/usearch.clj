@@ -96,9 +96,11 @@ Examples can be found in the [examples directory](https://github.com/phronmophob
 
 ```
 
-## Reference Docs
+## Docs
 
 [Reference](https://phronmophobic.github.io/usearch.clj/reference/)
+
+For a conceptual overview, see [Semantic Image Search with Clojure](https://phronmophobic.github.io/clip.clj/semantic-image-search-with-clojure/) with example code at https://github.com/phronmophobic/clip.clj/tree/main/examples/wikiart.
 
 
 ## License
