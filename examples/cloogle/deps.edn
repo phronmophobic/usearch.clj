@@ -33,7 +33,18 @@
         selmer/selmer {:mvn/version "1.12.59"}
         org.clojure/data.json {:mvn/version "2.4.0"}}
  :aliases
- {:project
+ {:server
+  {
+   :jvm-opts
+   ["-Xmx512m"
+    "-XX:+UnlockDiagnosticVMOptions"
+    "-XX:+DebugNonSafepoints"
+    "-XX:-HeapDumpOnOutOfMemoryError"
+    ;; "-Djna.library.path=/home/cloogle/llama.cpp/build/"
+    "--add-opens=java.base/java.nio=ALL-UNNAMED"
+    "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED"]}
+
+  :project
   {:jvm-opts
    ["-Xmx12g"
     "--add-opens=java.base/java.nio=ALL-UNNAMED"
