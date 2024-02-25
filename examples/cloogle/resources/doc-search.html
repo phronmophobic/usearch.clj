@@ -16,6 +16,11 @@
   }
 </style>
 <script>
+  function setStatus(s){
+      var statusElem = document.getElementById("status");
+      statusElem.textContent=s;
+  }
+
   // This function simulates making a POST request with JSON encoded data
   function search() {
     // Get the search input value
@@ -23,6 +28,8 @@
 
     // Prepare the POST request with JSON encoded data
     var requestData = JSON.stringify({ search: searchTerm });
+
+            setStatus("searching...");
 
     // Simulate making a fetch POST request with JSON encoded data
     // In a real-world scenario, you'd use the fetch API like this:
@@ -55,7 +62,7 @@
 
     var header = results.header;
 
-
+      setStatus("");
     // Populate the results table
     var resultsHeader = document.getElementById("results-table-header");
     resultsHeader.innerHTML = ""; // Clear previous results
@@ -116,6 +123,7 @@
       <input type="text" id="search-input" class="form-control" placeholder="Search...">
       <button class="btn btn-primary ml-2" onclick="search()">Search</button>
     </div>
+    <div id="status"></div>
   <div class="search-results">
     <table class="table">
       <thead id="results-table-header">
