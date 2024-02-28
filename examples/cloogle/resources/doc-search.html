@@ -92,6 +92,12 @@
       // cell3.innerHTML = result.description;
     });
   }
+
+function handleKeyPress(event) {
+    if (event.key == "Enter") {
+         search();
+    }
+}
 </script>
 </head>
 <body>
@@ -120,7 +126,7 @@
 
 <div class="container">
     <div class="search-bar">
-      <input type="text" id="search-input" class="form-control" placeholder="Search...">
+      <input type="text" id="search-input" class="form-control" placeholder="Search..." onkeypress="handleKeyPress(event)">
       <button class="btn btn-primary ml-2" onclick="search()">Search</button>
     </div>
     <div id="status"></div>
