@@ -203,7 +203,9 @@
 
 (def routes
   (bidi.ring/make-handler
-   ["/" { 
+   ["/" {
+         "favicon.ico" (fn [req]
+                         (res/resource-response "favicon.ico"))
          "search-docs"
          {:post search-docs-handler}
          "doc-search.html"
