@@ -2,7 +2,7 @@
   (:require [com.phronemophobic.llama :as llama]
             [clojure.java.io :as io]
             [clojure.edn :as edn]
-            [com.phronemophobic.clip :as clip]
+            ;; [com.phronemophobic.clip :as clip]
             [wkok.openai-clojure.api :as openai]
             [com.phronemophobic.llama.raw-gguf :as raw-gguf]
             [datalevin.core :as d]
@@ -31,6 +31,20 @@
 
 
 
+(defn distinct-by
+  "Returns a stateful transducer when that removes duplicates by keyfn"
+  ([keyfn]
+   (fn [rf]
+     (let [seen (volatile! #{})]
+       (fn
+         ([] (rf))
+         ([result] (rf result))
+         ([result input]
+          (let [k (keyfn input)]
+            (if (contains? @seen k)
+              result
+              (do (vswap! seen conj k)
+                  (rf result input))))))))))
 
 (defn get-embedding
   ([ctx s]
@@ -72,21 +86,213 @@
 
 (def var-table "var-table")
 (def embedding-table "embedding-table")
+(def openai-embedding-table "openai-embedding-table")
 
 (defonce kvdb
   (doto (d/open-kv (.getCanonicalPath (io/file "kv.db")))
     (d/open-dbi var-table)
-    (d/open-dbi embedding-table)))
+    (d/open-dbi embedding-table)
+    (d/open-dbi openai-embedding-table)))
 
 (defn index-var [idx vinfo]
 
   )
 
 (def full-analysis (analyses-iter "analysis.edn.gz"))
+
+
+
+(defn normalize-doc-string
+  ([s]
+   (loop [s s]
+     (if (< (count (.getBytes s "utf-8"))
+            500)
+       s
+       (recur (subs s 0 
+                    (min 500
+                         (dec (count s)))))))))
+
+(defn print-progress []
+  (map-indexed
+   (fn [i x]
+     (when (zero? (mod i 1000))
+       (println (format "%,d" i)))
+     x)))
+
+(defn with-retries []
+  (fn [rf]
+    (let [fails (volatile! [])]
+      (fn
+        ([] (rf))
+        ([result] (rf result))
+        ([result input]
+         (let [[error? new-result]
+               (try
+                 [false (rf result input)]
+                 (catch Exception e
+                   (prn e)
+                   [true e]))]
+           (if error?
+             (do
+               (vswap! fails
+                       (fn [fails]
+                         (let [t (.getTime (java.util.Date.))]
+                           (into [t]
+                                 (filter (fn [t2]
+                                           (< (- t t2)
+                                              (* 1000 60 5))))
+                                 fails))))
+               (prn "recent fail count" (count @fails))
+               (if (> (count @fails) 10)
+                 (throw new-result)
+                 (recur result input)))
+             new-result)))))))
+
 (comment
 
   (def analysis
     (doall (take 200 full-analysis)))
+
+  (def all-vars
+    (eduction
+     doc-xform
+     full-analysis))
+
+  
+
+
+
+
+
+  ,)
+(def api-key (:chatgpt/api-key
+              (edn/read-string (slurp "secrets.edn"))))
+
+(defn get-openai-embedding* [s]
+  (let [result (openai/create-embedding
+                {:model "text-embedding-3-small"
+                 :input s}
+                {:api-key api-key})]
+    (-> result
+        :data
+        first
+        :embedding)))
+
+(defn fetch-openai-embeddings []
+  ;; put embeddings in datalevin db
+  (time
+   (transduce (comp
+               (map :doc)
+               (print-progress)
+               (with-retries)
+               (map normalize-doc-string)
+               (map
+                (fn [doc-string]
+                  (when (not (d/get-value kvdb openai-embedding-table doc-string))
+                    (let [embedding (get-openai-embedding* doc-string)]
+                      (d/transact-kv 
+                       kvdb
+                       [[:put openai-embedding-table doc-string embedding]]))))))
+              (completing
+               (fn [_ _]))
+              nil
+              all-vars)))
+
+(def openai-index
+  (usearch/init {:dimensions 1536
+                 :quantization :quantization/f32}))
+(comment
+
+  (def all-vars
+    (eduction
+     (map (fn [i]
+            (when-let [m (d/get-value kvdb var-table i)]
+              (assoc m
+                     ::id i))))
+     (take-while some?)
+     (range)))
+
+  (def num-vars
+    (transduce
+     (map (constantly 1))
+     +
+     0
+     all-vars))
+  
+  
+  
+  (def usearch-entries
+    (eduction
+     (comp
+      (distinct-by 
+       (juxt :repo :filename :name :row :git/sha))
+      (map (fn [{:keys [doc]
+                 ::keys [id]}]
+             (let [doc-string (normalize-doc-string doc)
+                   emb (d/get-value kvdb openai-embedding-table doc-string)]
+               [id emb]))))
+     all-vars))
+
+  (usearch/reserve openai-index num-vars)
+  (reduce
+   (fn [_ [id emb]]
+     (usearch/add openai-index id (float-array emb)))
+   nil
+   usearch-entries)
+
+  (usearch/save openai-index "openai.usearch")
+
+  
+  
+  ,)
+
+
+#_(defn search [s]
+  (let [emb (get-openai-embedding-memo s)
+        results (usearch/search index (float-array emb) 4)]
+    (into []
+          (comp (map first)
+                (map #(d/get-value kvdb var-table %)))
+          results)
+    ))
+
+(def code-llama-index
+    (usearch/init {:dimensions (raw-gguf/llama_n_embd (:model ctx2))
+                   :quantization :quantization/f32}))
+(usearch/load code-llama-index "code-llama.usearch")
+(defn search-code-llama [s]
+  (let [emb (get-embedding ctx2 s)
+        results (usearch/search code-llama-index (float-array emb) 4)]
+    (into []
+          (comp (map first)
+                (map #(d/get-value kvdb var-table %)))
+          results)
+    ))
+
+(def clip-ctx (clip/create-context "/Users/adrian/workspace/clip.clj/models/CLIP-ViT-B-32-laion2B-s34B-b79K_ggml-model-f16.gguf"))
+(def clip-index
+  (delay
+    (let [index (usearch/init {:dimensions (count
+                                           ;; banana for scale
+                                           (clip/text-embedding clip-ctx "banana"))
+                              :quantization :quantization/f32})]
+      (usearch/load index "clip.usearch")
+      index)))
+(defn search-clip [s]
+  (let [emb (clip/text-embedding clip-ctx s)
+        results (usearch/search @clip-index (float-array emb) 4)]
+    (into []
+          (comp (map first)
+                (map #(d/get-value kvdb var-table %)))
+          results)
+    ))
+
+
+(def get-openai-embedding-memo (memoize get-openai-embedding))
+
+(def full-analysis (analyses-iter "analysis.edn.gz"))
+(comment
+
 
   (def all-vars
     (eduction
@@ -167,61 +373,6 @@
 
 
   ,)
-
-
-#_(defn search [s]
-  (let [emb (get-openai-embedding-memo s)
-        results (usearch/search index (float-array emb) 4)]
-    (into []
-          (comp (map first)
-                (map #(d/get-value kvdb var-table %)))
-          results)
-    ))
-
-(def code-llama-index
-    (usearch/init {:dimensions (raw-gguf/llama_n_embd (:model ctx2))
-                   :quantization :quantization/f32}))
-(usearch/load code-llama-index "code-llama.usearch")
-(defn search-code-llama [s]
-  (let [emb (get-embedding ctx2 s)
-        results (usearch/search code-llama-index (float-array emb) 4)]
-    (into []
-          (comp (map first)
-                (map #(d/get-value kvdb var-table %)))
-          results)
-    ))
-
-(def clip-ctx (clip/create-context "/Users/adrian/workspace/clip.clj/models/CLIP-ViT-B-32-laion2B-s34B-b79K_ggml-model-f16.gguf"))
-(def clip-index
-  (delay
-    (let [index (usearch/init {:dimensions (count
-                                           ;; banana for scale
-                                           (clip/text-embedding clip-ctx "banana"))
-                              :quantization :quantization/f32})]
-      (usearch/load index "clip.usearch")
-      index)))
-(defn search-clip [s]
-  (let [emb (clip/text-embedding clip-ctx s)
-        results (usearch/search @clip-index (float-array emb) 4)]
-    (into []
-          (comp (map first)
-                (map #(d/get-value kvdb var-table %)))
-          results)
-    ))
-
-(def api-key (:chatgpt/api-key
-              (edn/read-string (slurp "secrets.edn"))))
-
-(defn get-openai-embedding [s]
-  (let [result (openai/create-embedding
-                {:model "text-embedding-3-small"
-                 :input s}
-                {:api-key api-key})]
-    (-> result
-        :data
-        first
-        :embedding)))
-(def get-openai-embedding-memo (memoize get-openai-embedding))
 
 
 (def bge-index
