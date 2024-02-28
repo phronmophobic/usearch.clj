@@ -8,6 +8,8 @@
         ;; com.phronemophobic/llama-clj-combined {:mvn/version "0.8.1-SNAPSHOT"}
         com.phronemophobic/llama-clj {:mvn/version "0.8.1-SNAPSHOT"}
         com.phronemophobic.cljonda/llama-cpp-gguf-linux-x86-64 {:mvn/version "9c405c9f9a7cfd23511fd6b2de05dc72481119b4-SNAPSHOT"}
+        com.phronemophobic.cljonda/llama-cpp-gguf-darwin-aarch64 {:mvn/version "9c405c9f9a7cfd23511fd6b2de05dc72481119b4-SNAPSHOT"}
+
 
         com.phronemophobic.cljonda/usearch-c-darwin-aarch64 {:mvn/version "ce54b814a8a10f4c0c32fee7aad9451231b63f75"}
         com.phronemophobic.cljonda/usearch-c-linux-x86-64 {:mvn/version "ce54b814a8a10f4c0c32fee7aad9451231b63f75"}
