@@ -13,6 +13,7 @@
             [ring.adapter.jetty9 :refer [run-jetty]]
             [ring.middleware.defaults :as ring-defaults]
             ring.util.anti-forgery
+            ring.middleware.anti-forgery
             [ring.util.response :as res]
             [clojure.java.io :as io]
             bidi.ring
@@ -213,9 +214,8 @@
            {:status 200,
             :headers {"Content-Type" "text/html"}
             :body (selmer/render-file "doc-search.html"
-                                      {:anti-forgery
-                                       (hiccup/raw (ring.util.anti-forgery/anti-forgery-field))})})
-
+                                      {:anti-forgery-token
+                                       ring.middleware.anti-forgery/*anti-forgery-token*})})
 
          true (constantly
                {:status 404
@@ -237,9 +237,7 @@
   ;; routes
   (-> routes
       (wrap-errors)
-      (ring-defaults/wrap-defaults
-       (-> ring-defaults/site-defaults
-           (assoc-in [:security :anti-forgery] false)))))
+      (ring-defaults/wrap-defaults ring-defaults/site-defaults)))
 
 
 (comment
