@@ -243,6 +243,7 @@
 (comment
   (def server
     (run-jetty #'app {:port 3000
+                      :host "127.0.0.1"
                       :join? false}))
   
 
