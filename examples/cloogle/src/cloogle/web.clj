@@ -7,6 +7,7 @@
             [com.phronemophobic.llama.raw-gguf :as raw-gguf]
             [datalevin.core :as d]
             [com.phronemophobic.usearch :as usearch]
+            [wkok.openai-clojure.api :as openai]
 
             ;; web stuff
             [ring.adapter.jetty9 :refer [run-jetty]]
@@ -59,6 +60,18 @@
                     (.getCanonicalPath (io/file "bge-all.usearch")))
       index)))
 
+
+(defonce openai-index
+  (delay
+    (let [index
+          (usearch/init {:dimensions 1536
+                         :quantization :quantization/f32})]
+      (usearch/load index
+                    (.getCanonicalPath (io/file "openai.usearch")))
+      index))
+
+)
+
 (defn search-bge*
   ([s]
    (search-bge* s 4))
@@ -93,6 +106,26 @@
     (fn []
       (search-bge* s n))))
 
+(def api-key (:chatgpt/api-key
+              (edn/read-string (slurp "secrets.edn"))))
+
+(defn get-openai-embedding [s]
+  (let [result (openai/create-embedding
+                {:model "text-embedding-3-small"
+                 :input s}
+                {:api-key api-key})]
+    (-> result
+        :data
+        first
+        :embedding)))
+
+(defn search-openai [s n]
+  (let [emb (get-openai-embedding s)
+        results (usearch/search @openai-index (float-array emb) n)]
+    (into []
+          (comp (map first)
+                (map #(d/get-value @kvdb var-table %)))
+          results)))
 
 (defn page [title body]
   (hiccup.page/html5
@@ -160,7 +193,7 @@
                                  name])
                   :doc (->html doc)}))
 
-              (search-bge search 50))]
+              (search-openai search 50))]
     {:status 200
      :body
      (json/write-str
