@@ -105,4 +105,4 @@ For a conceptual overview, see [Semantic Image Search with Clojure](https://phro
 
 ## License
 
-Copyright 2021 Adrian Smith. Licensed under Apache License v2.0.
+Copyright 2024 Adrian Smith. Licensed under Apache License v2.0.
