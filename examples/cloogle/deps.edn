@@ -36,7 +36,7 @@
  {:server
   {
    :jvm-opts
-   ["-Xmx512m"
+   ["-Xmx2g"
     "-XX:+UnlockDiagnosticVMOptions"
     "-XX:+DebugNonSafepoints"
     "-XX:-HeapDumpOnOutOfMemoryError"
