@@ -96,6 +96,8 @@ Examples can be found in the [examples directory](https://github.com/phronmophob
 
 ```
 
+Warning! usearch.clj is not thread safe and may crash the JVM if used from multiple threads concurrently.
+
 ## Docs
 
 [Reference](https://phronmophobic.github.io/usearch.clj/reference/)
