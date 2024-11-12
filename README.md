@@ -104,6 +104,8 @@ Warning! usearch.clj is not thread safe and may crash the JVM if used from multi
 
 For a conceptual overview, see [Semantic Image Search with Clojure](https://phronmophobic.github.io/clip.clj/semantic-image-search-with-clojure/) with example code at https://github.com/phronmophobic/clip.clj/tree/main/examples/wikiart.
 
+Also used by [Cloogle](https://cloogle.phronemophobic.com/doc-search.html) doc search.
+
 
 ## License
 
